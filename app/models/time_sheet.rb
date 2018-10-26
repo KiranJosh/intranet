@@ -17,6 +17,7 @@ class TimeSheet
   validates :project_id, :date, :from_time, :to_time, :description, presence: true
 
   before_validation :check_vadation_while_creating_or_updateing_timesheet
+  before_validation :date_less_than_two_days, on: :update
 
   MAX_TIMESHEET_COMMAND_LENGTH = 5
   DATE_FORMAT_LENGTH = 3
@@ -71,7 +72,7 @@ class TimeSheet
       SlackApiService.new.post_message_to_slack(params['channel_id'], "\`Error :: Invalid date\`")
       return false
     end
-
+    return false unless date_less_than_seven_days(date, params) unless params['command'] == '/daily_status'
     return true if params['command'] == '/daily_status'
     return true
   end
@@ -92,12 +93,27 @@ class TimeSheet
     return false
   end
 
-  def check_date_range
+  def date_less_than_seven_days(date, params)
     if date < 7.days.ago
-      text = 'Error :: Not allowed to fill timesheet for this date. If you want to fill the timesheet, meet your manager.'
+      text = "\`Error :: Not allowed to fill timesheet for this date. If you want to fill the timesheet, meet your manager.\`"
+      errors.add(:date, text)
+      SlackApiService.new.post_message_to_slack(params['channel_id'], text)
+      return false
+    end
+    return true
+  end
+
+  def date_less_than_two_days
+    if date < Date.today - 2
+      text = "Error :: Not allowed to edit timesheet for this date. You can edit timesheet for past 2 days."
       errors.add(:date, text)
       return false
-    elsif date > Date.today 
+    end
+    return true
+  end
+
+  def check_date_range
+    if date > Date.today
       text = "Error :: Can't fill the timesheet for future date."
       errors.add(:date, text)
       return false
@@ -134,7 +150,6 @@ class TimeSheet
     return false unless from_time
     to_time = valid_time?(date, to_time, params, :to_time)
     return false unless to_time
-
     return true
   end
   
@@ -153,7 +168,7 @@ class TimeSheet
     end
     return_value
   end
-  
+
   def check_time_format(time)
     return false if time.to_s.include?('.')
     return time + (':00') unless time.to_s.include?(':')

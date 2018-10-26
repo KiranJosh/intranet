@@ -8,7 +8,7 @@ RSpec.describe TimeSheet, type: :model do
 
     before do
       user.public_profile.slack_handle = USER_ID
-      UserProject.create(user_id: user.id, project_id: project.id, start_date: DateTime.now - 2, end_date: nil)
+      UserProject.create(user_id: user.id, project_id: project.id, start_date: DateTime.now - 10, end_date: nil)
       user.save
       stub_request(:post, "https://slack.com/api/chat.postMessage")
     end
@@ -96,6 +96,23 @@ RSpec.describe TimeSheet, type: :model do
         time_sheet = FactoryGirl.build(:time_sheet, user_id: user.id, project_id: project.id, date: DateTime.now - 1, from_time: '20:00', to_time: '20:30')
         expect(time_sheet.save).to eq(false)
         expect(time_sheet.errors[:from_time]).to eq(["Error :: Can't fill the timesheet for future time."])
+      end
+
+      it 'Should not update record because date is less than 2 days' do
+        time_sheet = FactoryGirl.create(:time_sheet, user_id: user.id, project_id: project.id,
+                                        date: Date.today - 3, from_time: "#{Date.today - 3} 6:00",
+                                        to_time: "#{Date.today - 3} 7:00", description: 'test')
+        time_sheet.update_attributes(description: 'call')
+        expect(time_sheet.errors.full_messages).to eq(["Date Error :: Not allowed to edit timesheet for this date. You can edit timesheet for past 2 days."])
+      end
+
+      it 'Should update Timesheet' do
+        time_sheet = FactoryGirl.create(:time_sheet, user_id: user.id, project_id: project.id,
+                                        date: Date.today - 2, from_time: "#{Date.today - 2} 6:00",
+                                        to_time: "#{Date.today - 2} 7:00", description: 'test')
+        time_sheet.update_attributes(description: 'call')
+        expect(time_sheet.errors.full_messages).to eq([])
+        expect(time_sheet.reload.description).to eq('call')
       end
     end
 
