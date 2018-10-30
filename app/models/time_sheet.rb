@@ -23,6 +23,7 @@ class TimeSheet
   DATE_FORMAT_LENGTH = 3
   MAX_DAILY_STATUS_COMMAND_LENGTH = 2
   ALLOCATED_HOURS = 8
+  DAYS_FOR_UPDATE = 2
 
   def parse_timesheet_data(params)
     split_text = params['text'].split
@@ -104,7 +105,7 @@ class TimeSheet
   end
 
   def date_less_than_two_days
-    if date < Date.today - 2
+    if date < Date.today - DAYS_FOR_UPDATE
       text = "Error :: Not allowed to edit timesheet for this date. You can edit timesheet for past 2 days."
       errors.add(:date, text)
       return false
