@@ -33,4 +33,65 @@
   margin-left: auto;
   display: block;
   margin-right: 39em;
+  font-size: 1.1em
+}
+
+.add-timesheet-icon{
+  font-size: 36px;
+}
+
+.add-timesheet .fields{
+  display: -webkit-inline-box !important;
+}
+
+ul#menu li {
+    display:inline;
+    font-size: medium;
+    font-weight: bold;
+}
+
+.add-timesheet-date-li{
+  margin-left: 12em;
+}
+
+.add-timesheet-from-time-li{
+  margin-left: 9em;
+}
+
+.add-timesheet-to-time-li{
+  margin-left: 6em;
+}
+
+.add-timesheet-descripton-li{
+  margin-left: 7em;
+}
+
+.add-timesheet-project{
+  margin-left: 2em;
+}
+.add-timesheet-date{
+  margin-left: 4em;
+}
+
+.add-timesheet-from-time{
+  margin-left: 4em;
+}
+.add-timesheet-to-time{
+  margin-left: 4em;
+}
+
+.add-timesheet-description-text{
+  margin-left: 4em;
+}
+
+.line-befor-menu{
+  margin: 2px !important;
+}
+
+.line-after-menu{
+  margin: 6px !important;
+}
+
+.add-new-timesheet{
+  margin-left: 30em;
 }

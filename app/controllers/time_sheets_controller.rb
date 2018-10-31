@@ -3,6 +3,12 @@ class TimeSheetsController < ApplicationController
   load_and_authorize_resource only: [:index, :users_timesheet, :edit_timesheet, :update_timesheet, :new]
   before_action :user_exists?, only: [:create, :daily_status]
 
+  def new
+    @from_date = params[:from_date]
+    @to_date = params[:to_date]
+    @user = User.find_by(id: params[:user_id]) if params[:user_id].present?
+  end
+
   def create
     return_value, time_sheets_data = @time_sheet.parse_timesheet_data(params) unless params['user_id'].nil?
     if return_value == true
@@ -24,9 +30,8 @@ class TimeSheetsController < ApplicationController
       flash[:error] = "Invalid access"
       redirect_to time_sheets_path and return
     end
-
-    @from_date = params[:from_date]
-    @to_date = params[:to_date]
+    @from_date = params[:from_date] || Date.today.beginning_of_month.to_s
+    @to_date = params[:to_date] || Date.today.to_s
     @user = User.find(params[:user_id])
     @individual_timesheet_report, @total_work_and_leaves = TimeSheet.generate_individual_timesheet_report(@user, params) if TimeSheet.from_date_less_than_to_date?(@from_date, @to_date)
   end
@@ -61,6 +66,21 @@ class TimeSheetsController < ApplicationController
       error_message = TimeSheet.create_error_message(return_value)
       flash[:error] = error_message
       render 'edit_timesheet'
+    end
+  end
+
+  def create_time_sheet_from_intranet
+    @from_date = params['user']['from_date']
+    @to_date = params['user']['to_date']
+    @user = User.find_by(id: params['user']['user_id'])
+    return_value = TimeSheet.create_time_sheet(@user.id, update_timesheet_params)
+    if return_value == true
+      flash[:notice] = 'Timesheet created succesfully'
+      redirect_to users_time_sheets_path(user_id: @user.id, from_date: @from_date, to_date: @to_date)
+    else
+      error_message = TimeSheet.create_error_message(return_value)
+      flash[:error] = error_message
+      render 'new'
     end
   end
 

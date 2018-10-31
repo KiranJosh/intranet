@@ -86,7 +86,7 @@ class TimeSheet
   end
 
   def timesheet_date_greater_than_assign_project_date
-    user = User.find(user_id)
+    user = User.find(self.user_id)
     user_project = UserProject.find_by(user_id: user.id, project_id: project_id, end_date: nil)
       if date < user_project.start_date
         return true
@@ -680,7 +680,31 @@ class TimeSheet
       if time_sheet.update_attributes(value)
         return_value =  true
       else
-        if time_sheet.errors[:from_time].present? || time_sheet.errors[:from_time].present?
+        if time_sheet.errors[:from_time].present? || time_sheet.errors[:to_time].present?
+          return time_sheet.errors[:from_time].join(', ') if time_sheet.errors[:from_time].present?
+          return time_sheet.errors[:to_time].join(', ') if time_sheet.errors[:to_time].present?
+        else
+          return time_sheet.errors.full_messages.join(', ')
+        end
+      end
+    end
+    return_value
+  end
+
+  def self.create_time_sheet(user_id, params)
+    return_value = ''
+    params['time_sheets_attributes'].each do |key, value|
+      value['user_id'] = user_id
+      value['from_time'] = value['date'] + ' ' + value['from_time']
+      value['to_time'] = value['date'] + ' ' + value['to_time']
+      time_sheet = TimeSheet.new
+      time_sheet.attributes = value
+      time_sheet.time_validation(value['date'], value['from_time'], value['to_time'], 'from_ui')
+      return time_sheet.errors.full_messages.join(', ') if time_sheet.errors.full_messages.present?
+      if time_sheet.save
+        return_value = true
+      else
+        if time_sheet.errors[:from_time].present? || time_sheet.errors[:to_time].present?
           return time_sheet.errors[:from_time].join(', ') if time_sheet.errors[:from_time].present?
           return time_sheet.errors[:to_time].join(', ') if time_sheet.errors[:to_time].present?
         else

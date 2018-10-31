@@ -4,7 +4,8 @@
   %label To Date:
   = text_field_tag :to_date, params[:to_date], class: "form-control datepicker", placeholder: "To Date", value: @to_date, style: "height: 2em;"
   = submit_tag "Search", class: "btn btn-primary"
-
+  .pull-right
+    = link_to '', new_time_sheet_path(user_id: @user.id, from_date: @from_date, to_date: @to_date), "data-toggle" => "tooltip", title: 'Add Timesheet', class: "icon-plus add-timesheet-icon"
 %h1 #{@user.name} 
 %span{class: "text-height"} (Total Time : #{@total_work_and_leaves['total_work']} Leaves: #{@total_work_and_leaves['leaves']})
 .form-horizontal
