@@ -1,10 +1,13 @@
-%h1 Edit Your TimeSheet
+.pull-right
+  = link_to '', new_time_sheet_path(user_id: @user.id, from_date: @from_date, to_date: @to_date),
+    "data-toggle" => "tooltip", title: 'Add Timesheet', class: "icon-plus add-timesheet-icon"
+%h1 Edit Your TimeSheet 
 = simple_nested_form_for(@user, :url => update_time_sheets_path(@user.id, time_sheet_date: @time_sheet_date), :html => { method: 'PUT', multipart: true, class: 'edit-timesheet'}) do |f|
   %table.table
     %th Project
     %th Date
-    %th From Time
-    %th To Time
+    %th From Time(24hrs)
+    %th To Time(24hrs)
     %th Description
     %tbody
       = f.fields_for :time_sheets, @time_sheets do |time_sheet|

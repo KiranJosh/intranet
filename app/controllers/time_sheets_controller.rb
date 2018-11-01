@@ -1,12 +1,13 @@
 class TimeSheetsController < ApplicationController
   skip_before_filter :verify_authenticity_token
-  load_and_authorize_resource only: [:index, :users_timesheet, :edit_timesheet, :update_timesheet, :new]
+  load_and_authorize_resource only: [:index, :users_timesheet, :edit_timesheet, :update_timesheet, :new, :add_time_sheet]
   before_action :user_exists?, only: [:create, :daily_status]
 
   def new
     @from_date = params[:from_date]
     @to_date = params[:to_date]
     @user = User.find_by(id: params[:user_id]) if params[:user_id].present?
+    @time_sheets = @user.time_sheets.build
   end
 
   def create
@@ -58,28 +59,28 @@ class TimeSheetsController < ApplicationController
     @user = User.find_by(id: params['user_id'])
     @time_sheet_date = params[:time_sheet_date]
     @time_sheets = @user.time_sheets.where(date: params[:time_sheet_date].to_date)
-    return_value = TimeSheet.update_time_sheet(update_timesheet_params)
+    return_value = TimeSheet.update_time_sheet(timesheet_params)
     if return_value == true
       flash[:notice] = 'Timesheet Updated Succesfully'
       redirect_to users_time_sheets_path(@user.id, from_date: @from_date, to_date: @to_date)
     else
-      error_message = TimeSheet.create_error_message(return_value)
+      error_message = TimeSheet.create_error_message_while_updating_time_sheet(return_value)
       flash[:error] = error_message
       render 'edit_timesheet'
     end
   end
 
-  def create_time_sheet_from_intranet
+  def add_time_sheet
     @from_date = params['user']['from_date']
     @to_date = params['user']['to_date']
     @user = User.find_by(id: params['user']['user_id'])
-    return_value = TimeSheet.create_time_sheet(@user.id, update_timesheet_params)
+    return_value, error_messages, @time_sheets = TimeSheet.create_time_sheet(@user.id, timesheet_params)
     if return_value == true
       flash[:notice] = 'Timesheet created succesfully'
       redirect_to users_time_sheets_path(user_id: @user.id, from_date: @from_date, to_date: @to_date)
     else
-      error_message = TimeSheet.create_error_message(return_value)
-      flash[:error] = error_message
+      error_messages = TimeSheet.create_error_message_while_creating_time_sheet(error_messages)
+      flash[:error] = error_messages.join("<br>").html_safe
       render 'new'
     end
   end
@@ -141,7 +142,7 @@ class TimeSheetsController < ApplicationController
     @user = User.where('public_profile.slack_handle' => params['user_id']).first unless params['user_id'].nil?
   end
   
-  def update_timesheet_params
+  def timesheet_params
     params.require(:user).permit(:time_sheets_attributes => [:project_id, :date, :from_time, :to_time, :description, :id ])
   end
 end

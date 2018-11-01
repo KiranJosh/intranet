@@ -18,12 +18,14 @@ class TimeSheet
 
   before_validation :check_vadation_while_creating_or_updateing_timesheet
   before_validation :date_less_than_two_days, on: :update
+  before_validation :validate_date, on: :create
 
   MAX_TIMESHEET_COMMAND_LENGTH = 5
   DATE_FORMAT_LENGTH = 3
   MAX_DAILY_STATUS_COMMAND_LENGTH = 2
   ALLOCATED_HOURS = 8
   DAYS_FOR_UPDATE = 2
+  DAYS_FOR_CREATE = 7
 
   def parse_timesheet_data(params)
     split_text = params['text'].split
@@ -107,6 +109,16 @@ class TimeSheet
   def date_less_than_two_days
     if date < Date.today - DAYS_FOR_UPDATE
       text = "Error :: Not allowed to edit timesheet for this date. You can edit timesheet for past 2 days."
+      errors.add(:date, text)
+      return false
+    end
+    return true
+  end
+
+  def validate_date
+    return false if errors.full_messages.present?
+    if date < Date.today - DAYS_FOR_CREATE
+      text = "Error :: Not allowed to fill timesheet for this date. If you want to fill the timesheet, meet your manager."
       errors.add(:date, text)
       return false
     end
@@ -692,7 +704,9 @@ class TimeSheet
   end
 
   def self.create_time_sheet(user_id, params)
-    return_value = ''
+    time_sheets = []
+    error_messages = []
+    return_value = false
     params['time_sheets_attributes'].each do |key, value|
       value['user_id'] = user_id
       value['from_time'] = value['date'] + ' ' + value['from_time']
@@ -700,19 +714,23 @@ class TimeSheet
       time_sheet = TimeSheet.new
       time_sheet.attributes = value
       time_sheet.time_validation(value['date'], value['from_time'], value['to_time'], 'from_ui')
-      return time_sheet.errors.full_messages.join(', ') if time_sheet.errors.full_messages.present?
+      error_messages << time_sheet.errors.full_messages.join(', ') if time_sheet.errors.full_messages.present?
+      time_sheet.save
+      time_sheets << time_sheet
       if time_sheet.save
         return_value = true
+        time_sheets = []
       else
         if time_sheet.errors[:from_time].present? || time_sheet.errors[:to_time].present?
-          return time_sheet.errors[:from_time].join(', ') if time_sheet.errors[:from_time].present?
-          return time_sheet.errors[:to_time].join(', ') if time_sheet.errors[:to_time].present?
+          error_messages << time_sheet.errors[:from_time].join(', ') if time_sheet.errors[:from_time].present?
+          error_messages << time_sheet.errors[:to_time].join(', ') if time_sheet.errors[:to_time].present?
         else
-          return time_sheet.errors.full_messages.join(', ')
+          error_messages << time_sheet.errors.full_messages.join(', ')
         end
+        return_value = false
       end
     end
-    return_value
+    return return_value, error_messages, time_sheets
   end
 
   def self.get_errors_message(user, time_sheet_date)
@@ -744,10 +762,18 @@ class TimeSheet
     end
   end
 
-  def self.create_error_message(error)
+  def self.create_error_message_while_updating_time_sheet(error)
     index = error.remove!("`").index(/Error/)
     error = error[index..-1] unless index.nil?
     error
+  end
+
+  def self.create_error_message_while_creating_time_sheet(errors)
+    errors.map! do |error|
+      index = error.remove!("`").index(/Error/)
+      error[index..-1] unless index.nil?
+    end
+    errors
   end
 
   def self.load_user(user_id)
