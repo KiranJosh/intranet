@@ -292,6 +292,8 @@ RSpec.describe TimeSheetsController, type: :controller do
       sign_in user
       get :individual_project_report, id: project.id, from_date: '01/09/2018', to_date: '27/09/2018'
       expect(response).to have_http_status(302)
+    end
+  end
 
   context 'Update timesheet' do
     let!(:user) { FactoryGirl.create(:user, email: 'abc@joshsoftware.com', role: 'Admin') }
@@ -346,6 +348,40 @@ RSpec.describe TimeSheetsController, type: :controller do
       post :update_timesheet, user_id: user.id, user: params, time_sheet_date: Date.today - 1
       expect(flash[:error]).to be_present
       should render_template(:edit_timesheet)
+    end
+  end
+
+  context 'Add timesheet' do
+    let!(:user) { FactoryGirl.create(:user) }
+    let!(:project) { FactoryGirl.create(:project) }
+
+    before do
+      UserProject.create(user_id: user.id, project_id: project.id, start_date: Date.today - 10, end_date: nil)
+    end
+
+    it 'Should add timesheet' do
+      params = { "time_sheets_attributes" => {"0" => {"project_id" => "#{project.id}", 
+                 "date" => "#{Date.today - 1}", "from_time" => "#{Date.today - 1} - 10:00 AM", 
+                 "to_time" => "#{Date.today - 1} - 11:00 AM", "description" => "testing API and call with client"}},
+                 "user_id" => user.id, "from_date" => Date.today - 20, "to_date" => Date.today
+                }
+      sign_in user
+      post :add_time_sheet, user_id: user.id, user: params
+      expect(flash[:notice]).to be_present
+      expect(user.reload.time_sheets[0].user_id).to eq(user.id)
+      expect(user.time_sheets[0].project_id).to eq(project.id)
+    end
+
+    it 'Should not add timesheet because validation failure' do
+      params = { "time_sheets_attributes" => {"0" => {"project_id" => "#{project.id}", 
+                 "date" => "#{Date.today - 1}", "from_time" => "#{Date.today - 1} - 10:00", 
+                 "to_time" => "#{Date.today - 1} - 09:00", "description" => "testing API and call with client"}},
+                 "user_id" => user.id, "from_date" => Date.today - 20, "to_date" => Date.today
+               }
+      sign_in user
+      post :add_time_sheet, user_id: user.id, user: params
+      expect(flash[:error]).to be_present
+      should render_template(:new)
     end
   end
 end
